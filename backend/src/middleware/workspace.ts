@@ -4,7 +4,7 @@ import prisma from '../config/database';
 import { createOrGetUser } from '../services/user.service';
 
 export interface WorkspaceRequest extends AuthRequest {
-  workspaceId?: string;
+  workspaceId: string;
 }
 
 /**
@@ -12,7 +12,7 @@ export interface WorkspaceRequest extends AuthRequest {
  * Requires: workspaceId in query params, body, or headers
  */
 export async function validateWorkspaceAccess(
-  req: WorkspaceRequest,
+  req: AuthRequest,
   res: Response,
   next: NextFunction
 ): Promise<void> {
@@ -23,15 +23,17 @@ export async function validateWorkspaceAccess(
     }
 
     // Extract workspaceId from request
-    const workspaceId =
+    const extractedId =
       req.body?.workspaceId ||
       req.query?.workspaceId ||
       req.headers['x-workspace-id'];
 
-    if (!workspaceId || typeof workspaceId !== 'string') {
+    if (!extractedId || typeof extractedId !== 'string') {
       res.status(400).json({ error: 'Bad Request: workspaceId is required' });
       return;
     }
+
+    const workspaceId = extractedId;
 
     // Verify user has access to this workspace
     // Ensure user exists (sync from Clerk if needed)
@@ -52,7 +54,7 @@ export async function validateWorkspaceAccess(
     }
 
     // Attach workspaceId to request for use in controllers
-    req.workspaceId = workspaceId;
+    (req as WorkspaceRequest).workspaceId = workspaceId;
 
     next();
   } catch (error: any) {

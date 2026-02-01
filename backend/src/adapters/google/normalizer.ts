@@ -67,45 +67,44 @@ export async function normalizeAndStoreGoogleData(
     const cpa = calculateCPA(metric.spend, metric.conversions);
     const roas = calculateROAS(metric.conversionValue, metric.spend);
 
-    // Store metrics
-    await prisma.dailyMetrics.upsert({
+    // Store metrics - Use findFirst/create/update to avoid null-in-unique constraint issues with upsert
+    const existingMetric = await prisma.dailyMetrics.findFirst({
       where: {
-        workspaceId_platform_date_campaignId_adSetId_adId: {
-          workspaceId,
-          platform,
-          date: new Date(metric.date),
-          campaignId: campaign.id,
-          adSetId: null,
-          adId: null,
-        },
-      },
-      create: {
         workspaceId,
         platform,
         date: new Date(metric.date),
         campaignId: campaign.id,
-        impressions: metric.impressions,
-        clicks: metric.clicks,
-        spend: metric.spend,
-        conversions: metric.conversions,
-        conversionValue: metric.conversionValue,
-        ctr,
-        cpc,
-        cpa,
-        roas,
-      },
-      update: {
-        impressions: metric.impressions,
-        clicks: metric.clicks,
-        spend: metric.spend,
-        conversions: metric.conversions,
-        conversionValue: metric.conversionValue,
-        ctr,
-        cpc,
-        cpa,
-        roas,
+        adSetId: null,
+        adId: null,
       },
     });
+
+    const metricData = {
+      workspaceId,
+      platform,
+      date: new Date(metric.date),
+      campaignId: campaign.id,
+      impressions: metric.impressions,
+      clicks: metric.clicks,
+      spend: metric.spend,
+      conversions: metric.conversions,
+      conversionValue: metric.conversionValue,
+      ctr,
+      cpc,
+      cpa,
+      roas,
+    };
+
+    if (existingMetric) {
+      await prisma.dailyMetrics.update({
+        where: { id: existingMetric.id },
+        data: metricData,
+      });
+    } else {
+      await prisma.dailyMetrics.create({
+        data: metricData,
+      });
+    }
   }
 
   console.log(

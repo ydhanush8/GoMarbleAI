@@ -311,8 +311,8 @@ export async function disconnectIntegration(
     // Verify integration belongs to workspace
     const integration = await prisma.integration.findFirst({
       where: {
-        id: integrationId,
-        workspaceId: req.workspaceId,
+        id: integrationId as string,
+        workspaceId: req.workspaceId as string,
       },
     });
 
@@ -322,7 +322,7 @@ export async function disconnectIntegration(
 
     // Soft delete by marking as inactive
     await prisma.integration.update({
-      where: { id: integrationId },
+      where: { id: integrationId as string },
       data: { isActive: false },
     });
 
