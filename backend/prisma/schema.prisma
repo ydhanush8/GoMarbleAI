@@ -1,0 +1,183 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// User & Workspace Models
+// ============================================
+
+model User {
+  id         String          @id @default(uuid())
+  clerkId    String          @unique
+  email      String          @unique
+  name       String?
+  imageUrl   String?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  workspaces WorkspaceUser[]
+
+  @@map("users")
+}
+
+model Workspace {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        WorkspaceUser[]
+  integrations Integration[]
+  campaigns    Campaign[]
+
+  @@map("workspaces")
+}
+
+model WorkspaceUser {
+  id          String   @id @default(uuid())
+  userId      String
+  workspaceId String
+  role        String   @default("member") // owner, admin, member
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@map("workspace_users")
+}
+
+// ============================================
+// Integration Models (OAuth Tokens)
+// ============================================
+
+model Integration {
+  id             String    @id @default(uuid())
+  workspaceId    String
+  platform       String    // 'google' or 'meta'
+  accountId      String    // Platform-specific account ID
+  accountName    String?
+  accessToken    String    @db.Text // Encrypted
+  refreshToken   String?   @db.Text // Encrypted
+  tokenExpiresAt DateTime?
+  scopes         String[]
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, platform, accountId])
+  @@index([workspaceId, platform])
+  @@map("integrations")
+}
+
+// ============================================
+// Platform-Agnostic Data Models
+// ============================================
+
+model Campaign {
+  id          String   @id @default(uuid())
+  workspaceId String
+  platform    String   // 'google' or 'meta'
+  platformId  String   // Platform-specific campaign ID
+  name        String
+  status      String   // ACTIVE, PAUSED, REMOVED, etc.
+  objective   String?
+  budget      Decimal? @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  adSets    AdSet[]
+  metrics   DailyMetrics[]
+
+  @@unique([workspaceId, platform, platformId])
+  @@index([workspaceId, platform])
+  @@map("campaigns")
+}
+
+model AdSet {
+  id         String   @id @default(uuid())
+  campaignId String
+  platform   String
+  platformId String
+  name       String
+  status     String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  campaign Campaign       @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  ads      Ad[]
+  metrics  DailyMetrics[]
+
+  @@unique([campaignId, platformId])
+  @@index([campaignId])
+  @@map("ad_sets")
+}
+
+model Ad {
+  id         String   @id @default(uuid())
+  adSetId    String
+  platform   String
+  platformId String
+  name       String
+  status     String
+  creativeType String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  adSet   AdSet          @relation(fields: [adSetId], references: [id], onDelete: Cascade)
+  metrics DailyMetrics[]
+
+  @@unique([adSetId, platformId])
+  @@index([adSetId])
+  @@map("ads")
+}
+
+// ============================================
+// Metrics Model (Time-Series Performance Data)
+// ============================================
+
+model DailyMetrics {
+  id          String   @id @default(uuid())
+  workspaceId String
+  platform    String
+  date        DateTime @db.Date
+
+  // Relationships (nullable - metrics can be at campaign, adSet, or ad level)
+  campaignId String?
+  adSetId    String?
+  adId       String?
+
+  // Raw metrics from ad platforms
+  impressions     Int     @default(0)
+  clicks          Int     @default(0)
+  spend           Decimal @default(0) @db.Decimal(10, 2)
+  conversions     Int     @default(0)
+  conversionValue Decimal @default(0) @db.Decimal(10, 2)
+
+  // Computed metrics (calculated and stored for performance)
+  ctr  Decimal? @db.Decimal(5, 4) // Click-Through Rate
+  cpc  Decimal? @db.Decimal(10, 2) // Cost Per Click
+  cpa  Decimal? @db.Decimal(10, 2) // Cost Per Acquisition
+  roas Decimal? @db.Decimal(10, 2) // Return on Ad Spend
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  campaign Campaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  adSet    AdSet?    @relation(fields: [adSetId], references: [id], onDelete: Cascade)
+  ad       Ad?       @relation(fields: [adId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, platform, date, campaignId, adSetId, adId])
+  @@index([workspaceId, date])
+  @@index([campaignId, date])
+  @@index([adSetId, date])
+  @@index([adId, date])
+  @@map("daily_metrics")
+}

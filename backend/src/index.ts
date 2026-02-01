@@ -1,0 +1,101 @@
+import dotenv from 'dotenv';
+// Load environment variables immediately
+dotenv.config();
+
+import express, { Application } from 'express';
+import cors from 'cors';
+import { clerkMiddleware } from '@clerk/express';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { errorHandler } from './middleware/errorHandler';
+
+const app: Application = express();
+const PORT = process.env.PORT || 5000;
+
+// ============================================
+// Security Middleware
+// ============================================
+
+// Helmet for security headers
+app.use(helmet());
+
+// CORS configuration
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true,
+}));
+
+// Apply Clerk middleware globally
+app.use(clerkMiddleware({
+  publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+  secretKey: process.env.CLERK_SECRET_KEY,
+}));
+
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later.',
+});
+app.use('/api', limiter);
+
+// Body parsing
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// ============================================
+// Routes
+// ============================================
+
+// Import routes
+import authRoutes from './routes/auth.routes';
+import workspaceRoutes from './routes/workspace.routes';
+import oauthRoutes from './routes/oauth.routes';
+import metricsRoutes from './routes/metrics.routes';
+import insightsRoutes from './routes/insights.routes';
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/oauth', oauthRoutes);
+app.use('/api/metrics', metricsRoutes);
+app.use('/api/insights', insightsRoutes);
+
+// ============================================
+// Error Handling
+// ============================================
+
+app.use(errorHandler);
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
+// ============================================
+// Start Server & Background Jobs
+// ============================================
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📱 Environment: ${process.env.NODE_ENV || 'development'}`);
+
+  // Start background sync jobs
+  if (process.env.NODE_ENV !== 'test') {
+    import('./jobs/syncGoogle.job').then((module) => {
+      module.scheduleGoogleAdsSync();
+    });
+    
+    import('./jobs/syncMeta.job').then((module) => {
+      module.scheduleMetaAdsSync();
+    });
+  }
+  console.log(`🌐 CORS enabled for: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+});
+
+export default app;
