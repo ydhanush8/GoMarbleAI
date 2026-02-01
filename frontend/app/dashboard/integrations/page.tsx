@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '@clerk/nextjs';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Loader2, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 
@@ -14,9 +14,10 @@ interface Integration {
   createdAt: string;
 }
 
-export default function IntegrationsPage() {
+function IntegrationsContent() {
   const { getToken } = useAuth();
   const searchParams = useSearchParams();
+  // ... rest of state and effects ...
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
@@ -24,7 +25,6 @@ export default function IntegrationsPage() {
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null);
   const [showDisconnectModal, setShowDisconnectModal] = useState(false);
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | null>(null);
-
 
   useEffect(() => {
     fetchIntegrations();
@@ -341,5 +341,17 @@ export default function IntegrationsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function IntegrationsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center py-12">
+        <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
+      </div>
+    }>
+      <IntegrationsContent />
+    </Suspense>
   );
 }
