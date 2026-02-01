@@ -13,6 +13,18 @@ const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
 // ============================================
+// Global Middleware
+// ============================================
+
+// Path normalization to handle double slashes from env vars
+app.use((req, res, next) => {
+  if (req.url.includes('//')) {
+    req.url = req.url.replace(/\/\/+/g, '/');
+  }
+  next();
+});
+
+// ============================================
 // Security Middleware
 // ============================================
 
