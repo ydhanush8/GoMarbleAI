@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { WorkspaceRequest } from '../middleware/workspace';
 import prisma from '../config/database';
 import {
@@ -14,17 +14,18 @@ import {
  * Get aggregated metrics summary for workspace
  */
 export async function getMetricsSummary(
-  req: WorkspaceRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const wsReq = req as WorkspaceRequest;
   try {
-    if (!req.workspaceId) {
+    if (!wsReq.workspaceId) {
       res.status(400).json({ error: 'Workspace ID required' });
       return;
     }
 
-    const { startDate, endDate, platform } = req.query;
+    const { startDate, endDate, platform } = wsReq.query;
 
     // Build date filter
     const dateFilter: any = {};
@@ -41,7 +42,7 @@ export async function getMetricsSummary(
     // Aggregate metrics
     const metrics = await prisma.dailyMetrics.aggregate({
       where: {
-        workspaceId: req.workspaceId,
+        workspaceId: wsReq.workspaceId,
         date: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
         ...platformFilter,
       },
@@ -85,17 +86,18 @@ export async function getMetricsSummary(
  * Get campaign performance breakdown
  */
 export async function getCampaignMetrics(
-  req: WorkspaceRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const wsReq = req as WorkspaceRequest;
   try {
-    if (!req.workspaceId) {
+    if (!wsReq.workspaceId) {
       res.status(400).json({ error: 'Workspace ID required' });
       return;
     }
 
-    const { startDate, endDate, platform } = req.query;
+    const { startDate, endDate, platform } = wsReq.query;
 
     // Build filters
     const dateFilter: any = {};
@@ -107,7 +109,7 @@ export async function getCampaignMetrics(
     // Get campaigns with aggregated metrics
     const campaigns = await prisma.campaign.findMany({
       where: {
-        workspaceId: req.workspaceId,
+        workspaceId: wsReq.workspaceId,
         ...platformFilter,
       },
       include: {
@@ -162,17 +164,18 @@ export async function getCampaignMetrics(
  * Get daily trend data
  */
 export async function getDailyTrends(
-  req: WorkspaceRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const wsReq = req as WorkspaceRequest;
   try {
-    if (!req.workspaceId) {
+    if (!wsReq.workspaceId) {
       res.status(400).json({ error: 'Workspace ID required' });
       return;
     }
 
-    const { startDate, endDate, platform } = req.query;
+    const { startDate, endDate, platform } = wsReq.query;
 
     const dateFilter: any = {};
     if (startDate) dateFilter.gte = new Date(startDate as string);
@@ -184,7 +187,7 @@ export async function getDailyTrends(
     const metrics = await prisma.dailyMetrics.groupBy({
       by: ['date'],
       where: {
-        workspaceId: req.workspaceId,
+        workspaceId: wsReq.workspaceId,
         date: Object.keys(dateFilter).length > 0 ? dateFilter : undefined,
         ...platformFilter,
       },

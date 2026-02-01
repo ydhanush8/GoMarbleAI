@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { WorkspaceRequest } from '../middleware/workspace';
 import prisma from '../config/database';
 import { encrypt, decrypt } from '../config/encryption';
@@ -8,12 +8,13 @@ import { AppError } from '../middleware/errorHandler';
  * Initiate Google Ads OAuth flow
  */
 export async function initiateGoogleOAuth(
-  req: WorkspaceRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const wsReq = req as WorkspaceRequest;
   try {
-    if (!req.workspaceId) {
+    if (!wsReq.workspaceId) {
       res.status(400).json({ error: 'Workspace ID required' });
       return;
     }
@@ -32,7 +33,7 @@ export async function initiateGoogleOAuth(
     ];
 
     const state = Buffer.from(
-      JSON.stringify({ workspaceId: req.workspaceId })
+      JSON.stringify({ workspaceId: wsReq.workspaceId })
     ).toString('base64');
 
     const authUrl = new URL('https://accounts.google.com/o/oauth2/v2/auth');
@@ -54,12 +55,13 @@ export async function initiateGoogleOAuth(
  * Handle Google OAuth callback
  */
 export async function googleOAuthCallback(
-  req: WorkspaceRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const wsReq = req as WorkspaceRequest;
   try {
-    const { code, state } = req.query;
+    const { code, state } = wsReq.query;
 
     if (!code || typeof code !== 'string') {
       throw new AppError('Authorization code missing', 400);
@@ -148,12 +150,13 @@ export async function googleOAuthCallback(
  * Initiate Meta Ads OAuth flow
  */
 export async function initiateMetaOAuth(
-  req: WorkspaceRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const wsReq = req as WorkspaceRequest;
   try {
-    if (!req.workspaceId) {
+    if (!wsReq.workspaceId) {
       res.status(400).json({ error: 'Workspace ID required' });
       return;
     }
@@ -169,7 +172,7 @@ export async function initiateMetaOAuth(
     const scopes = ['ads_read', 'ads_management', 'business_management'];
 
     const state = Buffer.from(
-      JSON.stringify({ workspaceId: req.workspaceId })
+      JSON.stringify({ workspaceId: wsReq.workspaceId })
     ).toString('base64');
 
     const authUrl = new URL('https://www.facebook.com/v18.0/dialog/oauth');
@@ -188,12 +191,13 @@ export async function initiateMetaOAuth(
  * Handle Meta OAuth callback
  */
 export async function metaOAuthCallback(
-  req: WorkspaceRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const wsReq = req as WorkspaceRequest;
   try {
-    const { code, state } = req.query;
+    const { code, state } = wsReq.query;
 
     if (!code || typeof code !== 'string') {
       throw new AppError('Authorization code missing', 400);
@@ -264,18 +268,19 @@ export async function metaOAuthCallback(
  * Get workspace integrations
  */
 export async function getIntegrations(
-  req: WorkspaceRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const wsReq = req as WorkspaceRequest;
   try {
-    if (!req.workspaceId) {
+    if (!wsReq.workspaceId) {
       res.status(400).json({ error: 'Workspace ID required' });
       return;
     }
 
     const integrations = await prisma.integration.findMany({
-      where: { workspaceId: req.workspaceId },
+      where: { workspaceId: wsReq.workspaceId },
       select: {
         id: true,
         platform: true,
@@ -296,12 +301,13 @@ export async function getIntegrations(
  * Disconnect integration
  */
 export async function disconnectIntegration(
-  req: WorkspaceRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const wsReq = req as WorkspaceRequest;
   try {
-    const { integrationId } = req.params;
+    const { integrationId } = wsReq.params;
 
     if (!integrationId) {
       res.status(400).json({ error: 'Integration ID required' });
@@ -312,7 +318,7 @@ export async function disconnectIntegration(
     const integration = await prisma.integration.findFirst({
       where: {
         id: integrationId as string,
-        workspaceId: req.workspaceId as string,
+        workspaceId: wsReq.workspaceId as string,
       },
     });
 

@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import {
   createWorkspace,
@@ -11,24 +11,25 @@ import {
  * Create a new workspace
  */
 export async function createWorkspaceHandler(
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const authReq = req as AuthRequest;
   try {
-    if (!req.auth) {
+    if (!authReq.auth) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const { name } = req.body;
+    const { name } = authReq.body;
 
     if (!name || typeof name !== 'string') {
       res.status(400).json({ error: 'Workspace name is required' });
       return;
     }
 
-    const workspace = await createWorkspace(req.auth.userId, name);
+    const workspace = await createWorkspace(authReq.auth.userId, name);
 
     res.status(201).json(workspace);
   } catch (error) {
@@ -40,17 +41,18 @@ export async function createWorkspaceHandler(
  * Get all workspaces for current user
  */
 export async function getWorkspacesHandler(
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const authReq = req as AuthRequest;
   try {
-    if (!req.auth) {
+    if (!authReq.auth) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const workspaces = await getUserWorkspaces(req.auth.userId);
+    const workspaces = await getUserWorkspaces(authReq.auth.userId);
 
     res.json({ workspaces });
   } catch (error) {
@@ -62,24 +64,25 @@ export async function getWorkspacesHandler(
  * Get a specific workspace
  */
 export async function getWorkspaceHandler(
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const authReq = req as AuthRequest;
   try {
-    if (!req.auth) {
+    if (!authReq.auth) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const { workspaceId } = req.params;
+    const { workspaceId } = authReq.params;
 
     if (!workspaceId || typeof workspaceId !== 'string') {
       res.status(400).json({ error: 'Workspace ID is required' });
       return;
     }
 
-    const workspace = await getWorkspace(workspaceId, req.auth.userId);
+    const workspace = await getWorkspace(workspaceId, authReq.auth.userId);
 
     res.json(workspace);
   } catch (error) {
@@ -91,18 +94,19 @@ export async function getWorkspaceHandler(
  * Update workspace
  */
 export async function updateWorkspaceHandler(
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const authReq = req as AuthRequest;
   try {
-    if (!req.auth) {
+    if (!authReq.auth) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const { workspaceId } = req.params;
-    const { name } = req.body;
+    const { workspaceId } = authReq.params;
+    const { name } = authReq.body;
 
     if (!workspaceId || typeof workspaceId !== 'string') {
       res.status(400).json({ error: 'Workspace ID is required' });
@@ -114,7 +118,7 @@ export async function updateWorkspaceHandler(
       return;
     }
 
-    const workspace = await updateWorkspace(workspaceId, req.auth.userId, name);
+    const workspace = await updateWorkspace(workspaceId, authReq.auth.userId, name);
 
     res.json(workspace);
   } catch (error) {

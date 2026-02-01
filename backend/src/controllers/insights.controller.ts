@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { WorkspaceRequest } from '../middleware/workspace';
 import { generateInsights } from '../services/insights.service';
 
@@ -6,13 +6,14 @@ import { generateInsights } from '../services/insights.service';
  * Handle AI insights requests
  */
 export async function getInsightsHandler(
-  req: WorkspaceRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const wsReq = req as WorkspaceRequest;
   try {
-    const { query } = req.body;
-    const workspaceId = req.workspaceId;
+    const { query } = wsReq.body;
+    const workspaceId = wsReq.workspaceId;
 
     if (!workspaceId) {
       res.status(400).json({ error: 'Workspace ID is required' });

@@ -1,4 +1,4 @@
-import { Response, NextFunction } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { createOrGetUser, getUserByClerkId } from '../services/user.service';
 
@@ -7,17 +7,18 @@ import { createOrGetUser, getUserByClerkId } from '../services/user.service';
  * Called after successful Clerk authentication
  */
 export async function syncUser(
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const authReq = req as AuthRequest;
   try {
-    if (!req.auth) {
+    if (!authReq.auth) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const user = await createOrGetUser(req.auth.userId);
+    const user = await createOrGetUser(authReq.auth.userId);
 
     res.json({
       id: user.id,
@@ -35,17 +36,18 @@ export async function syncUser(
  * Get current user profile
  */
 export async function getCurrentUser(
-  req: AuthRequest,
+  req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const authReq = req as AuthRequest;
   try {
-    if (!req.auth) {
+    if (!authReq.auth) {
       res.status(401).json({ error: 'Unauthorized' });
       return;
     }
 
-    const user = await getUserByClerkId(req.auth.userId);
+    const user = await getUserByClerkId(authReq.auth.userId);
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
