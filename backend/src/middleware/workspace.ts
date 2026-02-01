@@ -4,7 +4,7 @@ import prisma from '../config/database';
 import { createOrGetUser } from '../services/user.service';
 
 export interface WorkspaceRequest extends AuthRequest {
-  workspaceId: string;
+  workspaceId?: string;
 }
 
 /**
